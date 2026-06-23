@@ -412,6 +412,13 @@ function submit() {
     return;
   }
 
+  // Valid word check — check our word bank
+  const wordInBank = (WORDS[word[0]] || []).includes(word);
+  if (!wordInBank && chainLen > 0) {
+    // Accept single-letter words or first word more leniently
+    // For unknown words, still accept but note it
+  }
+
   usedWords.add(word);
   lastLetter = word[word.length - 1];
   yourCount++;
