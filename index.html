@@ -1,0 +1,450 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Word Chain Duel</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Segoe UI', system-ui, sans-serif;
+      background: #0f0f1a;
+      color: #e8e8f0;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 2rem 1rem;
+    }
+
+    h1 {
+      font-size: 2rem;
+      font-weight: 800;
+      letter-spacing: -0.5px;
+      background: linear-gradient(135deg, #a78bfa, #60a5fa);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      margin-bottom: 0.25rem;
+    }
+
+    .subtitle {
+      color: #666;
+      font-size: 0.85rem;
+      margin-bottom: 2rem;
+    }
+
+    #game-area {
+      width: 100%;
+      max-width: 560px;
+    }
+
+    #chain {
+      background: #16162a;
+      border: 1px solid #2a2a4a;
+      border-radius: 16px;
+      padding: 1.25rem;
+      min-height: 200px;
+      max-height: 340px;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+      margin-bottom: 1rem;
+      scroll-behavior: smooth;
+    }
+
+    .word-bubble {
+      display: flex;
+      align-items: center;
+      gap: 0.6rem;
+      animation: pop-in 0.2s ease;
+    }
+
+    @keyframes pop-in {
+      from { opacity: 0; transform: translateY(6px) scale(0.96); }
+      to   { opacity: 1; transform: translateY(0) scale(1); }
+    }
+
+    .word-bubble.you  { flex-direction: row-reverse; }
+
+    .avatar {
+      width: 28px; height: 28px; border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 0.75rem; font-weight: 700; flex-shrink: 0;
+    }
+    .avatar.ai  { background: #4f46e5; color: #fff; }
+    .avatar.you { background: #059669; color: #fff; }
+
+    .bubble {
+      padding: 0.5rem 0.9rem;
+      border-radius: 14px;
+      font-size: 1.1rem;
+      font-weight: 600;
+      line-height: 1.3;
+      max-width: 80%;
+    }
+    .bubble.ai  { background: #1e1e3f; border: 1px solid #3730a3; }
+    .bubble.you { background: #064e3b; border: 1px solid #065f46; }
+
+    .first-letter {
+      color: #f59e0b;
+      font-size: 1.25rem;
+    }
+
+    #status-bar {
+      text-align: center;
+      font-size: 0.85rem;
+      color: #888;
+      margin-bottom: 1rem;
+      min-height: 1.2em;
+    }
+
+    #status-bar .must-start {
+      color: #a78bfa;
+      font-weight: 700;
+      font-size: 1rem;
+    }
+
+    #input-row {
+      display: flex;
+      gap: 0.6rem;
+    }
+
+    #word-input {
+      flex: 1;
+      background: #16162a;
+      border: 2px solid #2a2a4a;
+      border-radius: 12px;
+      color: #e8e8f0;
+      font-size: 1rem;
+      padding: 0.65rem 1rem;
+      outline: none;
+      transition: border-color 0.15s;
+    }
+    #word-input:focus { border-color: #6d28d9; }
+    #word-input:disabled { opacity: 0.4; }
+
+    #submit-btn {
+      background: linear-gradient(135deg, #7c3aed, #4f46e5);
+      color: white;
+      border: none;
+      border-radius: 12px;
+      padding: 0.65rem 1.2rem;
+      font-size: 1rem;
+      font-weight: 700;
+      cursor: pointer;
+      transition: opacity 0.15s, transform 0.1s;
+    }
+    #submit-btn:hover:not(:disabled) { opacity: 0.9; transform: scale(1.02); }
+    #submit-btn:active:not(:disabled) { transform: scale(0.98); }
+    #submit-btn:disabled { opacity: 0.4; cursor: default; }
+
+    #score-row {
+      display: flex;
+      justify-content: space-between;
+      margin-top: 1.25rem;
+      background: #16162a;
+      border: 1px solid #2a2a4a;
+      border-radius: 12px;
+      padding: 0.75rem 1.2rem;
+      font-size: 0.85rem;
+      color: #888;
+    }
+    #score-row span { font-weight: 700; color: #e8e8f0; }
+
+    #used-words {
+      margin-top: 1rem;
+      font-size: 0.75rem;
+      color: #444;
+      text-align: center;
+      line-height: 1.7;
+    }
+
+    .shake {
+      animation: shake 0.35s ease;
+    }
+    @keyframes shake {
+      0%,100% { transform: translateX(0); }
+      25%      { transform: translateX(-6px); }
+      75%      { transform: translateX(6px); }
+    }
+
+    #end-overlay {
+      display: none;
+      position: fixed; inset: 0;
+      background: rgba(0,0,0,0.75);
+      align-items: center; justify-content: center;
+      z-index: 10;
+    }
+    #end-overlay.show { display: flex; }
+
+    #end-card {
+      background: #1a1a2e;
+      border: 1px solid #3730a3;
+      border-radius: 20px;
+      padding: 2.5rem 2rem;
+      text-align: center;
+      max-width: 320px;
+      width: 90%;
+      animation: pop-in 0.25s ease;
+    }
+
+    #end-card h2 { font-size: 2rem; margin-bottom: 0.5rem; }
+    #end-card p  { color: #888; margin-bottom: 1.5rem; font-size: 0.9rem; }
+
+    #play-again {
+      background: linear-gradient(135deg, #7c3aed, #4f46e5);
+      color: white;
+      border: none;
+      border-radius: 12px;
+      padding: 0.75rem 2rem;
+      font-size: 1rem;
+      font-weight: 700;
+      cursor: pointer;
+      transition: opacity 0.15s;
+    }
+    #play-again:hover { opacity: 0.85; }
+
+    .thinking {
+      font-style: italic;
+      color: #555;
+      font-size: 0.85rem;
+      padding: 0.4rem 0;
+      animation: blink 1s ease infinite;
+    }
+    @keyframes blink {
+      0%,100% { opacity: 1; } 50% { opacity: 0.3; }
+    }
+  </style>
+</head>
+<body>
+
+<h1>Word Chain Duel</h1>
+<p class="subtitle">Each word must start with the last letter of the previous one</p>
+
+<div id="game-area">
+  <div id="chain"></div>
+  <div id="status-bar">You go first — type any word!</div>
+  <div id="input-row">
+    <input id="word-input" type="text" placeholder="Type a word…" autocomplete="off" autocorrect="off" spellcheck="false" />
+    <button id="submit-btn">Go</button>
+  </div>
+  <div id="score-row">
+    <div>Chain length: <span id="chain-len">0</span></div>
+    <div>Your words: <span id="your-count">0</span></div>
+    <div>AI words: <span id="ai-count">0</span></div>
+  </div>
+  <div id="used-words"></div>
+</div>
+
+<div id="end-overlay">
+  <div id="end-card">
+    <h2 id="end-emoji">🏆</h2>
+    <h3 id="end-title">You win!</h3>
+    <p id="end-desc"></p>
+    <button id="play-again">Play Again</button>
+  </div>
+</div>
+
+<script>
+// ── Word bank ──────────────────────────────────────────────────────────────
+// A solid offline English word set organized by starting letter
+const WORDS = {
+  a:["apple","art","arrow","anchor","anger","album","alien","alarm","ache","acid","actor","adapt","adult","agent","agile","agree","ahead","alert","alive","alley","allow","alone","along","aloud","altar","amber","amend","ample","angel","angle","anime","ankle","annex","antic","anvil","apart","apron","aqua","arena","argon","arise","armor","aroma","array","asset","atlas","attic","audio","audit","avian","avoid","awake","award","aware","awful","azure"],
+  b:["bear","bird","bolt","brave","bread","brush","burn","byte","baby","back","bake","ball","band","bank","barn","base","bath","beam","bean","beat","beef","bell","bend","bike","bill","bind","bite","blaze","bleak","blend","bless","blind","block","blood","bloom","blow","blue","boat","body","bold","bone","book","boom","boot","bore","both","bowl","brag","branch","brand","bream","brick","brief","brim","bring","brink","brook","brown","bulk","bull","bunch","burn","burst","busy"],
+  c:["cat","cave","calm","city","clam","clay","clip","coat","coin","cold","cook","cool","cord","corn","cost","couch","count","cover","crack","craft","crane","crave","crawl","crazy","creek","crew","crisp","crop","cross","crown","crumb","crush","crust","cube","curl","cute","cycle","cabin","cable","cache","cake","call","came","camp","canal","candy","cape","card","care","cart","case","cast","catch","cause","cedar","cell","cent","chair","chalk","chance","change","chart","cheap","check","cheek","chest","chief","child","chip","choir","chop","chore","chunk","cider","cinch","civic","civil","claim","clash","clasp","class","clean","clear","cleat","clerk","click","cliff","clink","clock","clone","cloth","cloud","clown","clue","coach","coast"],
+  d:["dark","dawn","deal","deck","deep","deer","desk","dial","dice","diet","dime","dirt","dish","disk","dive","dock","dome","door","dorm","dove","down","drag","draw","dream","dress","drift","drill","drink","drive","drop","drum","dusk","dust","dwell","dagger","dairy","dance","dare","dart","data","date","daze","dead","deaf","dean","dear","debt","deck","deem","deft","deli","dell","demo","dent","deny","depot","depth","derby","dew","digit","dip","dire","diva","dock","dog","dole","dome","done","dour","draft","drake","drank","drape","drip","drove","drown","dryer"],
+  e:["earn","ease","edge","edit","emit","epic","even","ever","evil","exam","each","early","east","echo","eerie","eight","elect","elite","ember","empty","ended","enemy","enjoy","enter","equal","error","essay","etch","euro","exact","extra","eager","eagle","earl","earth","easy","eel","effect","egg","ego","elbow","elder","elect","elf","elite","else","email","emerge","empire","endow","energy","envy","epoch","erode","erupt","evade","event","every","exact","exert","exile","exist","expel","extra","exude"],
+  f:["face","fact","fade","fail","fair","fake","fall","fame","farm","fast","fate","fawn","fear","feat","feed","feel","fell","felt","fence","fern","few","fief","file","fill","find","fine","fire","fish","fist","flag","flame","flat","flaw","flea","flew","flex","flit","flock","flow","foam","fold","fond","food","foot","ford","fork","form","fort","foul","four","fowl","fray","free","fret","frog","from","frost","frown","fruit","fume","fund","fuse","fuzz","fair","fairy","faint","faith","fancy","fangs","flash","flask","flair","flake","flank","flesh","fleet","fledge","flint","floor","flour","fluff"],
+  g:["game","gate","gaze","gear","germ","gift","girl","give","glad","glow","glue","goal","goat","gold","good","gown","grab","grade","grain","grant","grass","grate","grave","gray","graze","great","greed","green","greet","grew","grey","grid","grin","grip","grit","groan","grow","growl","guard","guide","guild","guilt","gulf","gush","gust","gaze","gem","gig","gild","gill","glee","glen","glob","gloom","gloss","gnome","gore","gore","gorge","gouge","graft","grail","grind","gripe","grope","grove","gruel","gruff"],
+  h:["hack","hail","half","hall","halt","hand","hang","hard","hare","harm","harp","hash","haste","haul","have","hawk","haze","head","heal","heap","hear","heat","heel","help","herb","herd","hide","high","hill","hint","hire","hive","hoax","hold","hole","home","hood","hook","hoop","hope","horn","hose","host","hour","huge","hulk","hull","hump","hunt","hurl","hymn","haze","hazy","heap","heft","heir","hence","hike","hilt","hind","hint","hiss","hoar","hoard","hobby","holly","honor","horde","howl","humor"],
+  i:["idea","idle","igloo","image","imp","inch","iron","isle","icon","icy","ire","iris","item","indeed","inner","input","inter","irk","ivory","ivy","ice","ill","imply","index","infer","info","inky","inn","issue","itch"],
+  j:["jack","jade","jail","jam","jar","jab","jig","job","jot","joy","jump","just","jade","jeer","jest","jet","jilt","jinx","jolt","joust","junk","jury"],
+  k:["keen","keep","kelp","kick","kind","king","kiss","knack","knee","kneel","knew","knife","knit","knock","knot","know"],
+  l:["lace","lake","lamp","land","lane","lark","lash","last","late","laud","lava","lawn","lead","leaf","lean","leap","leer","left","lens","lest","levy","lick","lift","lime","limp","line","link","lion","list","live","load","loam","lobe","lock","lodge","loft","lone","long","look","loom","loon","loop","lore","lore","lost","loud","love","luck","lump","lure","lurk","lust","lyric"],
+  m:["mace","mail","main","make","mane","mark","marsh","mask","mass","mast","mate","maze","mead","meal","mean","meet","meld","melt","mesh","mild","mile","mill","mind","mine","mint","mire","mist","mode","mole","mood","moor","more","moss","moth","move","much","mule","muse","must","myth","magic","major","maple","march","manor","manor","marble","mercy","merge","merit","might","model","moist","money","month","moral","mound","mount","mourn","moat","mob","mock","mop","mop","mock"],
+  n:["nail","name","nape","nary","navy","near","neat","neck","need","nest","newt","nice","nick","nine","node","none","noon","norm","nose","note","noun","nude","null","numb","nuns","naïve","narrate"],
+  o:["oak","oath","obey","oboe","odds","odor","once","only","open","oral","orb","orca","oven","over","owed","owl","own","off","oil","old","omen","opus","orchard","order","organ","overt","orbit"],
+  p:["pace","pack","page","pail","palm","park","part","past","path","pave","pawn","peak","pear","peel","peer","pelt","perk","pest","pick","pier","pile","pill","pine","pipe","pitch","plan","play","plot","plow","plum","plume","plunge","plus","poem","poke","pole","pond","pool","poor","pose","pour","prey","prim","prod","prop","prove","prowl","puff","pull","pump","pure","push","palm","panel","panda","panic","panel","pant","parse","paste","pause","phase","pixel","pivot","pixel","pixel","plain","plane","plank","plod","plop","plug","plunk","pod","poke"],
+  q:["quack","quaff","quail","qualm","quark","quest","queue","quick","quiet","quill","quirk","quit","quiz","quota"],
+  r:["race","rack","rage","rain","ramp","rank","rave","read","real","reap","reef","reel","rely","rent","rest","rice","rich","ride","rife","rift","ring","riot","rise","risk","roam","roar","robe","rock","rode","role","roof","room","root","rope","rout","rove","ruin","rule","rush","rust","raid","rail","rake","raze","reach","realm","rebel","recap","reed","reign","renew","repay","repel","reply","rerun","reset","reuse","revel","rigid","ripen","risen","rival","rivet","roast","robin","robot","rogue","rocky","rose","rouge","rough","round","route","rowdy"],
+  s:["safe","sage","sail","salt","same","sand","sane","sang","sash","save","scan","scar","seal","seam","seed","seek","self","sell","send","shack","shade","shape","share","shark","sharp","shelf","shell","shift","ship","shock","shoe","shop","shot","show","shut","sick","sigh","sign","silk","sing","sink","site","size","skip","slam","slap","slim","slip","slow","slug","smash","smoke","snap","snow","soak","soar","sock","soft","soil","sole","song","sort","soul","span","spell","spin","spit","spot","spur","stab","stall","star","stay","stem","step","stew","stir","stop","stub","such","suit","sulk","sung","sunk","swap","swim","swing","swoop"],
+  t:["tack","tail","tale","talk","tall","tame","tank","tape","task","team","tell","tend","tent","term","test","than","that","them","then","this","tide","tile","till","time","tire","toad","told","toll","tomb","tone","took","tool","torn","tour","town","trap","tray","tree","trim","trip","true","tube","tuck","tuft","tune","tusk","twig","twin","twist","type","table","tackle","taper","taste","teach","tease","teeth","thick","thin","think","thorn","those","thought","thrill","throw","thumb","tick","tiger","tight","timber","tired","title","today","token","total","touch","trace","track","trade","trail","train","trait","tram","trance","trend","tribe","trick","tried","troop","trout","truck","trump","trunk","trust","truth","tutor"],
+  u:["ugly","ulna","undo","unit","upon","urge","user","ultra","uncle","under","undue","unfit","union","unity","until","upper","upset","urban","usage","usual","utter"],
+  v:["vain","vale","vane","vary","vast","veer","veil","vein","vent","verb","vest","view","vine","void","volt","vote","vow","valve","value","vapor","vault","vigor","villa","viral","virus","visit","vital","vivid","vocal","voice","vague","venom","verse","virtue","vision","vigor"],
+  w:["wade","wage","wake","walk","wall","wand","ward","ware","warm","warn","warp","wart","wary","wasp","wave","weak","weal","wear","weed","week","well","went","were","west","whim","whip","wide","wile","will","wilt","wind","wing","wink","wire","wise","wish","wisp","with","woke","wolf","womb","wood","word","wore","worm","wove","wrap","wren","wring","writ","wrung","wane","wary","watt","wax","weave","weird","where","while","white","whole","wick","wild","wilt","wince","wring"],
+  x:["xbox","xray"],
+  y:["yarn","yawn","year","yell","yoga","yoke","yore","your","yule","yam"],
+  z:["zeal","zero","zest","zinc","zone","zoom","zap","zen","zig","zip","zit"]
+};
+
+// ── State ──────────────────────────────────────────────────────────────────
+let usedWords = new Set();
+let lastLetter = '';
+let yourCount = 0;
+let aiCount = 0;
+let chainLen = 0;
+let waitingForAI = false;
+
+// ── DOM ────────────────────────────────────────────────────────────────────
+const chain = document.getElementById('chain');
+const input = document.getElementById('word-input');
+const submitBtn = document.getElementById('submit-btn');
+const statusBar = document.getElementById('status-bar');
+const chainLenEl = document.getElementById('chain-len');
+const yourCountEl = document.getElementById('your-count');
+const aiCountEl = document.getElementById('ai-count');
+const usedWordsEl = document.getElementById('used-words');
+const endOverlay = document.getElementById('end-overlay');
+const endEmoji = document.getElementById('end-emoji');
+const endTitle = document.getElementById('end-title');
+const endDesc = document.getElementById('end-desc');
+
+// ── Helpers ────────────────────────────────────────────────────────────────
+function formatWord(word) {
+  return `<span class="first-letter">${word[0].toUpperCase()}</span>${word.slice(1)}`;
+}
+
+function addBubble(word, who) {
+  const div = document.createElement('div');
+  div.className = `word-bubble ${who}`;
+  div.innerHTML = `
+    <div class="avatar ${who}">${who === 'you' ? 'YOU' : 'AI'}</div>
+    <div class="bubble ${who}">${formatWord(word)}</div>
+  `;
+  chain.appendChild(div);
+  chain.scrollTop = chain.scrollHeight;
+}
+
+function updateStats() {
+  chainLenEl.textContent = chainLen;
+  yourCountEl.textContent = yourCount;
+  aiCountEl.textContent = aiCount;
+  usedWordsEl.textContent = [...usedWords].join(' · ');
+}
+
+function setStatus(msg, mustStart) {
+  if (mustStart) {
+    statusBar.innerHTML = `Must start with <span class="must-start">${mustStart.toUpperCase()}</span> — ${msg}`;
+  } else {
+    statusBar.textContent = msg;
+  }
+}
+
+function shake() {
+  input.classList.remove('shake');
+  void input.offsetWidth;
+  input.classList.add('shake');
+}
+
+function endGame(won, reason) {
+  endEmoji.textContent = won ? '🏆' : '💀';
+  endTitle.textContent = won ? 'You Win!' : 'Game Over';
+  endDesc.textContent = reason + ` Chain length: ${chainLen}.`;
+  endOverlay.classList.add('show');
+}
+
+// ── AI turn ────────────────────────────────────────────────────────────────
+function pickAIWord(letter) {
+  const pool = (WORDS[letter] || []).filter(w => !usedWords.has(w));
+  if (!pool.length) return null;
+
+  // Prefer words that end with a "hard" letter to challenge the player
+  const hard = ['x','z','q','j','u','v'];
+  const hardOpts = pool.filter(w => hard.includes(w[w.length - 1]));
+  const finalPool = hardOpts.length > 0 && Math.random() < 0.4 ? hardOpts : pool;
+  return finalPool[Math.floor(Math.random() * finalPool.length)];
+}
+
+function aiTurn() {
+  waitingForAI = true;
+  input.disabled = true;
+  submitBtn.disabled = true;
+
+  const thinkEl = document.createElement('div');
+  thinkEl.className = 'thinking';
+  thinkEl.textContent = 'AI is thinking…';
+  chain.appendChild(thinkEl);
+  chain.scrollTop = chain.scrollHeight;
+
+  setTimeout(() => {
+    chain.removeChild(thinkEl);
+    const word = pickAIWord(lastLetter);
+
+    if (!word) {
+      endGame(true, `The AI couldn't think of a word starting with "${lastLetter.toUpperCase()}"!`);
+      return;
+    }
+
+    usedWords.add(word);
+    lastLetter = word[word.length - 1];
+    aiCount++;
+    chainLen++;
+    addBubble(word, 'ai');
+    updateStats();
+    setStatus('Your turn!', lastLetter);
+
+    input.disabled = false;
+    submitBtn.disabled = false;
+    waitingForAI = false;
+    input.focus();
+  }, 700 + Math.random() * 800);
+}
+
+// ── Player turn ────────────────────────────────────────────────────────────
+function submit() {
+  if (waitingForAI) return;
+  const word = input.value.trim().toLowerCase().replace(/[^a-z]/g, '');
+  input.value = '';
+
+  if (!word) return;
+
+  if (lastLetter && word[0] !== lastLetter) {
+    shake();
+    setStatus(`Must start with "${lastLetter.toUpperCase()}"!`, lastLetter);
+    return;
+  }
+
+  if (usedWords.has(word)) {
+    shake();
+    setStatus(`"${word}" was already used!`, lastLetter);
+    return;
+  }
+
+  usedWords.add(word);
+  lastLetter = word[word.length - 1];
+  yourCount++;
+  chainLen++;
+  addBubble(word, 'you');
+  updateStats();
+
+  setStatus('AI is responding…');
+  aiTurn();
+}
+
+// ── Controls ───────────────────────────────────────────────────────────────
+submitBtn.addEventListener('click', submit);
+input.addEventListener('keydown', e => { if (e.key === 'Enter') submit(); });
+
+document.getElementById('play-again').addEventListener('click', () => {
+  usedWords.clear();
+  lastLetter = '';
+  yourCount = aiCount = chainLen = 0;
+  chain.innerHTML = '';
+  usedWordsEl.textContent = '';
+  updateStats();
+  setStatus('You go first — type any word!');
+  endOverlay.classList.remove('show');
+  input.disabled = false;
+  submitBtn.disabled = false;
+  waitingForAI = false;
+  input.focus();
+});
+
+// ── Start ──────────────────────────────────────────────────────────────────
+updateStats();
+input.focus();
+</script>
+</body>
+</html>
